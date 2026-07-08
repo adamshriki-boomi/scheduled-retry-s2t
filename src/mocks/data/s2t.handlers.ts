@@ -41,6 +41,22 @@ import {
 const ok = (body: unknown) => (_req: any, res: any, ctx: any) =>
   res(ctx.status(200), ctx.json(body));
 
+// MSW 0.44 only auto-parses req.body into an object when it recognizes the
+// request's JSON content-type; otherwise handlers receive the raw string.
+// Axios requests from the app hit the string path, so parse defensively.
+export const parseBody = (req: { body?: unknown }): Record<string, any> => {
+  const raw = req?.body;
+  if (raw && typeof raw === 'object') return raw as Record<string, any>;
+  if (typeof raw === 'string' && raw.length) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+};
+
 const FIXED_TS = 1717200000000;
 const FIXED_ISO = '2024-06-01T00:00:00.000Z';
 const oid = (id: string) => ({ $oid: id });
@@ -126,7 +142,7 @@ const testPollHandler = rest.get(
 // --- Metadata service: databases/schemas dropdowns + reload metadata -------
 // POST */pull_requests responds already-done ('D'), so the queryFn skips polling.
 const pullRequestsHandler = rest.post('*/pull_requests', (req, res, ctx) => {
-  const body = (req.body as any) || {};
+  const body = parseBody(req);
   const task: string = body.task;
   const connectionId: string = body.pull_request_inputs?.connection_id ?? '';
   const databaseName: string | undefined =
@@ -285,7 +301,7 @@ const buildRiverResponse = (crossId: string, payload: any, status: string) => {
 
 // POST */rivers (create) — mint an id, persist, echo the V1 response shape.
 const createRiverHandler = rest.post('*/rivers', (req, res, ctx) => {
-  const body = (req.body as any) || {};
+  const body = parseBody(req);
   const crossId = newRiverId(body.name);
   saveRiver(crossId, body.name, { ...body, cross_id: crossId });
   const stored = getRiver(crossId);
@@ -298,7 +314,7 @@ const createRiverHandler = rest.post('*/rivers', (req, res, ctx) => {
 // PUT */rivers/:riverId (save) — persist and echo. Guard against `list`.
 const updateRiverHandler = rest.put('*/rivers/:riverId', (req, res, ctx) => {
   const riverId = String(req.params.riverId);
-  const body = (req.body as any) || {};
+  const body = parseBody(req);
   const stored = saveRiver(riverId, body.name, {
     ...body,
     cross_id: riverId,
@@ -518,7 +534,7 @@ const getRiverHandler = rest.get('*/rivers/:riverId', (req, res, ctx) => {
 const fetchRiverListHandler = rest.post(
   '*/api/rivers/list',
   (req, res, ctx) => {
-    const body = (req.body as any) || {};
+    const body = parseBody(req);
     const crossId = body?._id?.$oid ?? body?._id ?? '';
     const stored = getRiver(crossId);
     const source = stored?.payload?.properties?.source ?? {};

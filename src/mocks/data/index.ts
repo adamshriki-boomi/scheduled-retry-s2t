@@ -4,7 +4,7 @@ export {
   dataSourceTypesFor,
   dataSourceSectionsFor,
 } from './datasources';
-export { s2tHandlers } from './s2t.handlers';
+export { parseBody, s2tHandlers } from './s2t.handlers';
 export { riverGroups } from './groups';
 export {
   hasRivers,

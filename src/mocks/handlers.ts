@@ -12,6 +12,7 @@ import {
   riverGroups,
   riversLegacyPage,
   riversSearchPage,
+  parseBody,
   s2tHandlers,
   sourcesList,
 } from './data';
@@ -58,10 +59,7 @@ export const handlers = [
   // --- Account settings save (PATCH /accounts/:id) ---
   // Must be registered BEFORE the permissive */api/* fallback.
   rest.patch('*/api/accounts/:accountId', async (req, res, ctx) => {
-    const body: Record<string, unknown> =
-      typeof req.body === 'object' && req.body !== null
-        ? (req.body as Record<string, unknown>)
-        : {};
+    const body = parseBody(req);
     // Extract the three retry keys plus any other account_settings keys
     // that may have been sent. Deep-merge into the existing overlay so
     // unrelated settings (set by other handlers) are not clobbered.
@@ -115,7 +113,7 @@ export const handlers = [
   rest.get('*/has_rivers', ok(hasRivers)),
   rest.get('*/sources_list', ok(sourcesList)),
   rest.post('*/dashboard', (req, res, ctx) => {
-    const body = (req.body as any) || {};
+    const body = parseBody(req);
     return res(
       ctx.status(200),
       ctx.json(dashboardData(body.metric, body.view)),
