@@ -632,8 +632,13 @@ const runsListHandler = rest.get('*/rivers/:riverId/runs', (req, res, ctx) => {
     );
   }
 
-  // Seeded flow: find the run in runHistory by run_group_id.
-  const run = flow.runHistory.find(r => r.run_group_id === runGroupId);
+  // Seeded flow: find the run in runHistory by run_group_id. The app strips
+  // leading zeros off the id when building the query (?run=0…0895488 arrives
+  // as run_group_id=895488), so compare zero-stripped values on both sides.
+  const stripZeros = (id: string) => id.replace(/^0+/, '');
+  const run = flow.runHistory.find(
+    r => stripZeros(r.run_group_id) === stripZeros(runGroupId),
+  );
   if (!run) {
     return res(
       ctx.status(200),

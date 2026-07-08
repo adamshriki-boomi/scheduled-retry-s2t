@@ -1,5 +1,5 @@
 import { Box, Flex, IconButton, Portal, Text } from '@chakra-ui/react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useCore } from 'store/core';
 import { TOUR_STORIES } from './tour.config';
@@ -80,11 +80,6 @@ export function PrototypeTour() {
       return next;
     });
   }, []);
-
-  // Sync to localStorage whenever it changes.
-  useEffect(() => {
-    writeCollapsed(collapsed);
-  }, [collapsed]);
 
   if (!account || !env) return null;
 
