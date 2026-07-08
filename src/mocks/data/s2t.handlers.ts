@@ -507,6 +507,11 @@ const targetDatasourceFromName = (name: string): string => {
   return 'snowflake';
 };
 
+// Returns true when the riverId looks like a real 24-char hex-ish id
+// (starts with digits/letters, no dots, not "list").
+const isRealRiverId = (id: string): boolean =>
+  /^[0-9a-fA-F]{24}$/.test(id) || /^[a-z0-9]{8,}$/.test(id);
+
 // The retry-story flows get scheduled_retry enabled; others default to off.
 const RETRY_STORY_NAMES_SET = new Set([
   'Marketo Leads → Snowflake',
@@ -521,7 +526,10 @@ const RETRY_STORY_NAMES_SET = new Set([
 // metadata rather than a generic "Data Flow" placeholder.
 const getRiverHandler = rest.get('*/rivers/:riverId', (req, res, ctx) => {
   const riverId = String(req.params.riverId);
-  if (riverId === 'list') {
+  // Guard: pass through non-id strings (e.g. "list" or legacy ".html" routes)
+  // so they don't render raw JSON. In MSW 0.44, rest handlers have no
+  // req.passthrough() — return 404 JSON so the app handles it gracefully.
+  if (riverId === 'list' || riverId.includes('.') || !isRealRiverId(riverId)) {
     return res(ctx.status(404), ctx.json({}));
   }
   const stored = getRiver(riverId);
@@ -589,11 +597,74 @@ const getRiverHandler = rest.get('*/rivers/:riverId', (req, res, ctx) => {
 // --- Landing page: legacy river fetch (redux fetchRiver) -------------------
 // POST */api/rivers/list body {_id:{$oid}} → legacy river shape. The reducer
 // dereferences river_definitions.shared_params.notifications, so it must exist.
+// When the id belongs to a seeded flow (not wizard-created), synthesize the
+// legacy shape from the flow's seed data so the per-river Activities header
+// shows the real flow name and icons rather than a generic "Data Flow".
+const sharedParams = {
+  notifications: {
+    on_failure: null,
+    on_warning: null,
+    on_run_threshold: null,
+  },
+  run_notification_timeout: null,
+  river_variables: {},
+};
+
 const fetchRiverListHandler = rest.post(
   '*/api/rivers/list',
   (req, res, ctx) => {
     const body = parseBody(req);
     const crossId = body?._id?.$oid ?? body?._id ?? '';
+
+    // Seeded flow branch: look up by cross id and build the legacy shape from seed data.
+    const seededFlow = FLOWS.find(f => f.cross === crossId);
+    if (seededFlow) {
+      const group = groupByKey(seededFlow.group);
+      const sourceConnector = connectorById(seededFlow.source);
+      const targetId = targetDatasourceFromName(seededFlow.name);
+      const targetConnector = connectorById(targetId);
+      return res(
+        ctx.status(200),
+        ctx.json({
+          cross_id: oid(crossId),
+          _id: oid(crossId),
+          river_definitions: {
+            cross_id: oid(crossId),
+            _id: oid(crossId),
+            river_name: seededFlow.name,
+            river_type: 'src_to_trgt',
+            river_type_id: 'src_to_trgt',
+            source_type: seededFlow.source,
+            source: {
+              name: sourceConnector?.name ?? seededFlow.source,
+              icon: '',
+            },
+            target: {
+              name: targetConnector?.name ?? targetId,
+              icon: '',
+            },
+            group_id: {
+              _id: oid(seededFlow.groupCross),
+              name: group?.name ?? '',
+            },
+            is_scheduled: seededFlow.scheduled,
+            is_api_v2: true,
+            updated_by_name: seededFlow.modifiedBy,
+            river_modified_date: { $date: seededFlow.lastModified },
+            river_date_inserted: { $date: seededFlow.lastModified },
+            env_id: oid(ENV_PROD_ID),
+            account: oid(ACCOUNT_ID),
+            schedulers: seededFlow.scheduled
+              ? [{ is_enabled: true, cron_expression: '0 0 1/1 * *' }]
+              : [],
+            shared_params: sharedParams,
+          },
+          tasks_definitions: [],
+        }),
+      );
+    }
+
+    // Wizard-created river branch.
     const stored = getRiver(crossId);
     const source = stored?.payload?.properties?.source ?? {};
     return res(
@@ -613,23 +684,14 @@ const fetchRiverListHandler = rest.post(
             name: stored?.group_name ?? '',
           },
           is_scheduled: true,
-          is_api_v2: false,
+          is_api_v2: true,
           updated_by_name: 'Adam Shriki',
           river_modified_date: { $date: FIXED_TS },
           river_date_inserted: { $date: FIXED_TS },
           env_id: oid(ENV_PROD_ID),
           account: oid(ACCOUNT_ID),
           schedulers: [{ is_enabled: true, cron_expression: '0 0 1/1 * *' }],
-          // Reducer reads shared_params.notifications + run_notification_timeout.
-          shared_params: {
-            notifications: {
-              on_failure: null,
-              on_warning: null,
-              on_run_threshold: null,
-            },
-            run_notification_timeout: null,
-            river_variables: {},
-          },
+          shared_params: sharedParams,
         },
         tasks_definitions: [],
       }),

@@ -21,6 +21,14 @@ const describe = (f: Flow): string => {
     : `Ingests ${connectorById(f.source)?.name} objects into the warehouse.`;
 };
 
+/** Derive the target warehouse id from the flow name ("→ Snowflake" etc.). */
+const targetTypeFromName = (name: string): string => {
+  if (name.includes('BigQuery')) return 'bigquery';
+  if (name.includes('Redshift')) return 'redshift';
+  if (name.includes('Snowflake')) return 'snowflake';
+  return '';
+};
+
 const toRiverItem = (f: Flow) => ({
   name: f.name,
   river_status: 'active',
@@ -32,9 +40,9 @@ const toRiverItem = (f: Flow) => ({
   river_cross_id: f.cross,
   last_updated_at: f.lastModified,
   description: describe(f),
-  is_api_v2: false,
+  is_api_v2: true,
   river_type: f.type,
-  target_type: '',
+  target_type: targetTypeFromName(f.name),
 });
 
 // Rivers created via the S2T wizard, projected into a grid row so they show up
@@ -50,7 +58,7 @@ const createdToRiverItem = (r: StoredRiver) => ({
   river_cross_id: r.cross_id,
   last_updated_at: r.created_at,
   description: 'Created with the Source-to-Target wizard.',
-  is_api_v2: false,
+  is_api_v2: true,
   river_type: 'src_to_trgt',
   target_type: r.payload?.properties?.target?.name ?? '',
 });
@@ -89,7 +97,7 @@ const toLegacyRiver = (f: Flow) => ({
     updated_by_name: f.modifiedBy,
     river_modified_date: { $date: f.lastModified },
     river_date_inserted: { $date: f.lastModified },
-    is_api_v2: false,
+    is_api_v2: true,
     river_desc: describe(f),
     source: { name: connectorById(f.source)?.name, icon: '' },
     source_type: f.source,
