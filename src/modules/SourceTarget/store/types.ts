@@ -4,6 +4,12 @@ import { RunType } from '../components/form/form.consts';
 export interface IRiverV1 extends Omit<IRiverResponseV1, 'properties'> {
   properties: SourceToTargetRiverProperties;
 }
+export interface ScheduledRetrySetting {
+  is_enabled: boolean;
+  max_retries: number; // 1–12, default 3
+  delay_minutes: number; // 1–60, default 5
+}
+
 export interface IRiverResponseV1 {
   cross_id?: string;
   account_id?: string;
@@ -25,6 +31,7 @@ export interface IRiverResponseV1 {
       failure: NotificationSetting;
       run_threshold: NotificationSetting;
     };
+    scheduled_retry: ScheduledRetrySetting;
   }>;
 }
 

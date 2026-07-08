@@ -52,7 +52,12 @@ export const useGetAndValidateDataSource = type => {
 };
 
 export const usePrepopulateFields = (sourceFromURL, targetFromURL) => {
-  const initialFormValues = createRiverTemplate();
+  const { accountSettings } = useAccount();
+  const initialFormValues = createRiverTemplate({
+    is_enabled: !!accountSettings?.enable_scheduled_retry,
+    max_retries: accountSettings?.scheduled_retry_max_retries ?? 3,
+    delay_minutes: accountSettings?.scheduled_retry_delay_minutes ?? 5,
+  });
   const repositoryIdFromURL = useSearchParam('repository_id');
   const knowledgeBaseIdFromURL = useSearchParam('kb_id');
 

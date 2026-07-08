@@ -15,6 +15,7 @@ import { FormProvider, useController, useForm } from 'react-hook-form';
 import { MainRiverFormProvider } from 'hooks/useMainRiverFormContext';
 import { useEffectOnce } from 'react-use';
 import { useRiverActions } from 'store/river';
+import { useAccount } from 'store/core';
 import { QuitConfirmationModal } from './components/QuitConfirmationModal';
 import { WizardControls } from './components/WizardControls';
 import {
@@ -56,13 +57,18 @@ export default function CreateSourceToTarget() {
   useDocumentTitle('Data Flow');
   const [currentStep, setStep] = useState(0);
   const { setVariables } = useRiverActions();
+  const { accountSettings } = useAccount();
   const sourceFromURL = useGetAndValidateDataSource('source');
   const targetFromURL = useGetAndValidateDataSource('target');
   const setUpDefaultValues = usePrepopulateFields(sourceFromURL, targetFromURL);
   const formMethods = useForm<RiverForm>({
     mode: 'onChange',
     defaultValues: {
-      river: createRiverTemplate(),
+      river: createRiverTemplate({
+        is_enabled: !!accountSettings?.enable_scheduled_retry,
+        max_retries: accountSettings?.scheduled_retry_max_retries ?? 3,
+        delay_minutes: accountSettings?.scheduled_retry_delay_minutes ?? 5,
+      }),
       blueprint: {},
     },
   });

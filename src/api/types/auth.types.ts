@@ -169,6 +169,9 @@ export interface AccountSettings {
   allow_usage_notifications?: boolean;
   allow_ai_based_processing?: boolean;
   super_admins_account?: boolean;
+  enable_scheduled_retry?: boolean;
+  scheduled_retry_max_retries?: number;
+  scheduled_retry_delay_minutes?: number;
 }
 
 export enum EnvironmentDefault {

@@ -4,6 +4,7 @@ import {
   IRiverResponseV1,
   IRiverTypes,
   IRiverV1,
+  ScheduledRetrySetting,
   SchemasApiResponse,
 } from './types';
 
@@ -58,7 +59,15 @@ const getCurrentTimeCronExpression = () => {
   return `${minutes} ${hours} 1/1 * *`;
 };
 
-export const createRiverTemplate = (): Omit<
+const defaultScheduledRetry: ScheduledRetrySetting = {
+  is_enabled: false,
+  max_retries: 3,
+  delay_minutes: 5,
+};
+
+export const createRiverTemplate = (
+  retryDefaults?: ScheduledRetrySetting,
+): Omit<
   IRiverV1,
   | 'cross_id'
   | 'account_id'
@@ -94,6 +103,7 @@ export const createRiverTemplate = (): Omit<
         execution_time_limit_seconds: 0,
       },
     },
+    scheduled_retry: retryDefaults ?? defaultScheduledRetry,
   },
   metadata: {},
 });

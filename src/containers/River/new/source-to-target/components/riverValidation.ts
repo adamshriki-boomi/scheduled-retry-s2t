@@ -1,6 +1,6 @@
 import { ExtractMethod } from 'api/types';
 import { emailValidation } from 'utils/validations';
-import { boolean, lazy, mixed, object, string } from 'yup';
+import { boolean, lazy, mixed, number, object, string } from 'yup';
 
 const schemaValidation = lazy(schemas => {
   if (typeof schemas === 'object') {
@@ -167,6 +167,25 @@ const validateEmails = value => {
 
 export const notificationsAndSettingsSchema = object({
   settings: object({
+    scheduled_retry: object({
+      is_enabled: boolean(),
+      max_retries: number().when('is_enabled', {
+        is: true,
+        then: schema =>
+          schema
+            .required('Max retries is required')
+            .min(1, 'Max retries must be between 1 and 12')
+            .max(12, 'Max retries must be between 1 and 12'),
+      }),
+      delay_minutes: number().when('is_enabled', {
+        is: true,
+        then: schema =>
+          schema
+            .required('Delay is required')
+            .min(1, 'Delay must be between 1 and 60 minutes')
+            .max(60, 'Delay must be between 1 and 60 minutes'),
+      }),
+    }),
     notification: object({
       failure: object({
         is_enabled: boolean(),
