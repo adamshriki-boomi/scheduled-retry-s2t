@@ -15,6 +15,7 @@ import { rest } from 'msw';
 import { ACCOUNT_ID, ENV_PROD_ID } from '../fixtures';
 import { connectionsByType } from './connections';
 import { targetTypes } from './datasources';
+import { connectorById, groupByKey } from './_shared';
 import { FLOWS } from './seed';
 import {
   ACTIVATION_PREFIX,
@@ -499,15 +500,72 @@ const singleRunHandler = rest.get(
   },
 );
 
+// Derive a plausible target datasource_id from the flow name ("→ Snowflake" etc).
+const targetDatasourceFromName = (name: string): string => {
+  if (name.includes('BigQuery')) return 'bigquery';
+  if (name.includes('Redshift')) return 'redshift';
+  return 'snowflake';
+};
+
+// The retry-story flows get scheduled_retry enabled; others default to off.
+const RETRY_STORY_NAMES_SET = new Set([
+  'Marketo Leads → Snowflake',
+  'Facebook Ads Insights → Snowflake',
+]);
+
 // GET */rivers/:riverId (V1 STT river on the summary page) — full response.
 // `properties.schemas` MUST be an array. Guard: `list` is POST-only, but keep
 // the guard so a stray GET */rivers/list can't match here.
+// Before the generic fallback, look up seeded FLOWS by cross id so clicking a
+// row in the Data Flows grid opens a summary page with the real flow name and
+// metadata rather than a generic "Data Flow" placeholder.
 const getRiverHandler = rest.get('*/rivers/:riverId', (req, res, ctx) => {
   const riverId = String(req.params.riverId);
   if (riverId === 'list') {
     return res(ctx.status(404), ctx.json({}));
   }
   const stored = getRiver(riverId);
+  // If this id belongs to a seeded flow (not a wizard-created one), synthesize
+  // the payload from the flow's seed data so the summary page reflects the
+  // real name, group, source/target, and scheduler.
+  const seededFlow = stored ? null : FLOWS.find(f => f.cross === riverId);
+  if (seededFlow) {
+    const group = groupByKey(seededFlow.group);
+    const sourceConnector = connectorById(seededFlow.source);
+    const targetId = targetDatasourceFromName(seededFlow.name);
+    const targetConnector = connectorById(targetId);
+    const isRetryFlow = RETRY_STORY_NAMES_SET.has(seededFlow.name);
+    const seededPayload = {
+      name: seededFlow.name,
+      group_id: seededFlow.groupCross,
+      group_name: group?.name ?? '',
+      kind: 'main_river',
+      type: seededFlow.type === 'logic' ? 'logic' : 'source_to_target',
+      schedulers: seededFlow.scheduled
+        ? [{ is_enabled: true, cron_expression: '0 0 1/1 * *' }]
+        : [],
+      settings: {
+        scheduled_retry: { is_enabled: isRetryFlow },
+      },
+      notification_settings: {},
+      properties: {
+        source: {
+          datasource_id: seededFlow.source,
+          connection_name: sourceConnector?.name ?? seededFlow.source,
+        },
+        target: {
+          datasource_id: targetId,
+          connection_name: targetConnector?.name ?? targetId,
+        },
+        schemas: [],
+      },
+      metadata: {},
+    };
+    return res(
+      ctx.status(200),
+      ctx.json(buildRiverResponse(riverId, seededPayload, 'active')),
+    );
+  }
   const payload = stored?.payload ?? {
     name: 'Data Flow',
     group_id: '',

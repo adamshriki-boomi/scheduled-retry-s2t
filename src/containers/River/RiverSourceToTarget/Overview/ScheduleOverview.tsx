@@ -1,3 +1,4 @@
+import { TagLabel } from '@chakra-ui/react';
 import {
   Center,
   DateDisplay,
@@ -339,6 +340,8 @@ const TRIGGER_LABEL: Record<string, string> = {
   retry: 'Retry',
 };
 
+// TriggerRow renders unconditionally (with a 'manual' default) so the Trigger
+// row is always present — unlike LastRun which is conditional on lastRun data.
 export function TriggerRow({
   lastRun,
 }: {
@@ -351,7 +354,7 @@ export function TriggerRow({
       <Text>Trigger</Text>
       {trigger === 'retry' ? (
         <Tag size="sm" variant="blue" borderRadius="999px">
-          {label}
+          <TagLabel>{label}</TagLabel>
         </Tag>
       ) : (
         <Text>{label}</Text>

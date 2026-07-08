@@ -1,4 +1,5 @@
 import { StatusTypes } from 'api/types';
+import { TagLabel } from '@chakra-ui/react';
 import {
   Flex,
   HStack,
@@ -62,7 +63,7 @@ export function RunRow({ item: run, index }) {
       <Flex minW="70px" alignItems="center">
         {run?.trigger === 'retry' ? (
           <Tag size="sm" variant="blue" borderRadius="999px">
-            Retry
+            <TagLabel>Retry</TagLabel>
           </Tag>
         ) : (
           <Text textStyle="R7">

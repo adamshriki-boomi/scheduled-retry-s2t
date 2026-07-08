@@ -122,7 +122,17 @@ export const handlers = [
 
   // --- Activities / Monitoring (specific before the broad `*/activities`) ---
   rest.get('*/activities_statistics', ok(activitiesStatistics)),
-  rest.post('*/activities_graph', ok(activitiesGraph)),
+  rest.post('*/activities_graph', (req, res, ctx) => {
+    const body = parseBody(req);
+    const riverIds: string[] = Array.isArray(body.river_ids)
+      ? body.river_ids
+      : [];
+    const items =
+      riverIds.length > 0
+        ? activitiesGraph.items.filter(item => riverIds.includes(item.river_id))
+        : activitiesGraph.items;
+    return res(ctx.status(200), ctx.json({ items }));
+  }),
   rest.get('*/activities', (req, res, ctx) => {
     const p = req.url.searchParams;
     const page = Number(p.get('page')) || 1;
