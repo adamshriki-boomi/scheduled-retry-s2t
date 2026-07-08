@@ -18,6 +18,7 @@ import {
   LastRun,
   NextRun,
   ScheduleOverview,
+  TriggerRow,
   VersionSchedule,
 } from './ScheduleOverview';
 
@@ -72,6 +73,7 @@ export function Overview() {
           <NextRun />
 
           <LastModified />
+          <TriggerRow lastRun={lastRun} />
         </RenderGuard>
       </Flex>
 

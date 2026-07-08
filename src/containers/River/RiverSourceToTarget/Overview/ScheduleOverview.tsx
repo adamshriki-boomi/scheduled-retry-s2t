@@ -6,6 +6,7 @@ import {
   HStack,
   RenderGuard,
   RiveryButton,
+  Tag,
   Text,
 } from 'components';
 import {
@@ -309,15 +310,47 @@ export function LastModified() {
   const metadata = useSttMetadata();
   const utcTime = metadata?.last_updated_at;
   return (
-    <Flex justify="space-between" pt={1}>
-      <Text>Last Modified</Text>
-      <Flex gap={1}>
-        <Text textStyle="R7">By {metadata?.last_updated_by}</Text>/
+    <Flex flexDir="column">
+      <Flex justify="space-between" pt={1}>
+        <Text>Last Modified</Text>
         <Flex gap={1}>
-          <DateDisplay value={metadata?.last_updated_at} /> (UTC {getTimeZone()}
-          ) <UTCTimezoneView utcTime={utcTime} />
+          <Text textStyle="R7">By {metadata?.last_updated_by}</Text>/
+          <Flex gap={1}>
+            <DateDisplay value={metadata?.last_updated_at} /> (UTC{' '}
+            {getTimeZone()}) <UTCTimezoneView utcTime={utcTime} />
+          </Flex>
         </Flex>
       </Flex>
+      <Divider
+        orientation="horizontal"
+        border="2px"
+        borderColor="background-secondary"
+      />
+    </Flex>
+  );
+}
+
+const TRIGGER_LABEL: Record<string, string> = {
+  schedule: 'Schedule',
+  api: 'API',
+  logic: 'Logic',
+  manual: 'Manual',
+  retry: 'Retry',
+};
+
+export function TriggerRow({ lastRun }: { lastRun?: { trigger?: string } }) {
+  const trigger = lastRun?.trigger ?? 'manual';
+  const label = TRIGGER_LABEL[trigger] ?? 'Manual';
+  return (
+    <Flex justify="space-between" py={1}>
+      <Text>Trigger</Text>
+      {trigger === 'retry' ? (
+        <Tag size="sm" variant="blue" borderRadius="999px">
+          {label}
+        </Tag>
+      ) : (
+        <Text>{label}</Text>
+      )}
     </Flex>
   );
 }

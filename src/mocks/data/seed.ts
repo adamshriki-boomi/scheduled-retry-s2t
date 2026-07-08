@@ -289,12 +289,15 @@ const SPECS: FlowSpec[] = [
   },
 ];
 
+export type RunTrigger = 'schedule' | 'api' | 'logic' | 'manual' | 'retry';
+
 export interface RunEntry {
   status: string;
   max_run_duration_milliseconds: number;
   run_group_id: string;
   rpu: number;
   run_date: number;
+  trigger: RunTrigger;
 }
 
 export interface Flow extends FlowSpec {
@@ -359,6 +362,7 @@ function buildRunHistory(
       run_group_id: mkId(3, flowIndex * 100 + j),
       rpu: Number((r() * 4).toFixed(2)),
       run_date: Math.round(lastRun - j * gap),
+      trigger: spec.scheduled ? 'schedule' : 'manual',
     });
   }
   return runs; // index 0 = most recent

@@ -98,4 +98,5 @@ interface LastRuns {
   run_group_id: string;
   rpu: number;
   run_date: string;
+  trigger?: string;
 }
