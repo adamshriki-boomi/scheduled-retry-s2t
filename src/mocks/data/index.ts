@@ -1,5 +1,10 @@
 /** Barrel for the BDI prototype mock dataset (see individual modules). */
-export { dataSourceTypes } from './datasources';
+export {
+  dataSourceTypes,
+  dataSourceTypesFor,
+  dataSourceSectionsFor,
+} from './datasources';
+export { s2tHandlers } from './s2t.handlers';
 export { riverGroups } from './groups';
 export {
   hasRivers,

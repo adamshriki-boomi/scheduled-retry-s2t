@@ -6,11 +6,13 @@ import {
   activitiesStatistics,
   connectionsList,
   dashboardData,
-  dataSourceTypes,
+  dataSourceSectionsFor,
+  dataSourceTypesFor,
   hasRivers,
   riverGroups,
   riversLegacyPage,
   riversSearchPage,
+  s2tHandlers,
   sourcesList,
 } from './data';
 
@@ -35,8 +37,21 @@ export const handlers = [
   // --- Shell bootstrap (RTK Query v1: https://api.*/v1/*) ---
   rest.get('*/v1/accounts/:accountId/environments', ok(environmentsPage)),
 
-  // --- Source-icon registry (resolves datasource icons app-wide) ---
-  rest.get('*/data_source_types', ok(dataSourceTypes)),
+  // --- Source-icon registry + S2T source/target pickers ---
+  // App-wide icon resolution (no segment) AND the wizard's segmented fetches
+  // (?segment=source|target); the app reads response.items and filters by segment.
+  rest.get('*/data_source_types', (req, res, ctx) =>
+    res(
+      ctx.status(200),
+      ctx.json(dataSourceTypesFor(req.url.searchParams.get('segment'))),
+    ),
+  ),
+  rest.get('*/data_source_sections', (req, res, ctx) =>
+    res(
+      ctx.status(200),
+      ctx.json(dataSourceSectionsFor(req.url.searchParams.get('segment'))),
+    ),
+  ),
 
   // --- Dashboard ---
   rest.get('*/has_rivers', ok(hasRivers)),
@@ -82,6 +97,11 @@ export const handlers = [
 
   // --- Connections (React connections screen) ---
   rest.get('*/api/connections/list', ok(connectionsList)),
+
+  // --- New Source-to-Target data flow wizard (Steps 1-4 + Activate + Run) ---
+  // Registered BEFORE the permissive fallbacks; specific */rivers/:id/<sub>
+  // routes are ordered before the generic */rivers/:riverId inside this list.
+  ...s2tHandlers,
 
   // --- Permissive fallbacks: never let an API call escape to the network ---
   // v1 host (paginated-style empty page covers fetchAllPages consumers)
