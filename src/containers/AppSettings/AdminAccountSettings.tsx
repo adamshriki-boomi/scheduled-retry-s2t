@@ -117,6 +117,36 @@ export const getControls = ({ targets }) => [
     chakra: true,
   },
   {
+    type: ControlList.SWITCH,
+    name: 'enable_scheduled_retry',
+    display_name: 'Enable Scheduled Retry',
+  },
+  {
+    type: ControlList.PLAIN_TEXT,
+    color: 'font-secondary',
+    fontSize: 'xs',
+    display_name:
+      'Default retry settings applied to new Source-to-Target Data Flows. S2T only.',
+  },
+  {
+    type: ControlList.INPUT_NUMBER,
+    name: 'scheduled_retry_max_retries',
+    display_name: 'Default Max Retries',
+    chakra: true,
+    mb: 3,
+    min: 1,
+    max: 12,
+  },
+  {
+    type: ControlList.INPUT_NUMBER,
+    name: 'scheduled_retry_delay_minutes',
+    display_name: 'Default Delay Between Retries (minutes)',
+    chakra: true,
+    mb: 3,
+    min: 1,
+    max: 60,
+  },
+  {
     type: ControlList.TITLE,
     display_name: 'AI Features',
     mt: 3,

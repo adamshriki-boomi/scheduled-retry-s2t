@@ -29,10 +29,68 @@ import {
 const ok = (body: unknown) => (_req: any, res: any, ctx: any) =>
   res(ctx.status(200), ctx.json(body));
 
+const LS_ACCOUNT_KEY = 'bdi_account_settings';
+
+function readAccountOverlay(): Record<string, unknown> {
+  try {
+    const raw = localStorage.getItem(LS_ACCOUNT_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 export const handlers = [
   // --- Critical auth handshake (axios `api` instance: <origin>/api/*) ---
   rest.post('*/api/login', ok(userLogin)),
-  rest.post('*/api/token', ok(accountDetails)),
+  rest.post('*/api/token', (_req, res, ctx) => {
+    const overlay = readAccountOverlay();
+    const merged = {
+      ...accountDetails,
+      account_settings: {
+        ...accountDetails.account_settings,
+        ...overlay,
+      },
+    };
+    return res(ctx.status(200), ctx.json(merged));
+  }),
+
+  // --- Account settings save (PATCH /accounts/:id) ---
+  // Must be registered BEFORE the permissive */api/* fallback.
+  rest.patch('*/api/accounts/:accountId', async (req, res, ctx) => {
+    const body: Record<string, unknown> =
+      typeof req.body === 'object' && req.body !== null
+        ? (req.body as Record<string, unknown>)
+        : {};
+    // Extract the three retry keys plus any other account_settings keys
+    // that may have been sent. Deep-merge into the existing overlay so
+    // unrelated settings (set by other handlers) are not clobbered.
+    const retryKeys = [
+      'enable_scheduled_retry',
+      'scheduled_retry_max_retries',
+      'scheduled_retry_delay_minutes',
+    ] as const;
+    const existing = readAccountOverlay();
+    const update: Record<string, unknown> = { ...existing };
+    for (const key of retryKeys) {
+      if (Object.prototype.hasOwnProperty.call(body, key)) {
+        update[key] = body[key];
+      }
+    }
+    // Also persist allow_ai_based_processing if present (same settings form)
+    const extraKeys = ['allow_ai_based_processing'] as const;
+    for (const key of extraKeys) {
+      if (Object.prototype.hasOwnProperty.call(body, key)) {
+        update[key] = body[key];
+      }
+    }
+    try {
+      localStorage.setItem(LS_ACCOUNT_KEY, JSON.stringify(update));
+    } catch {
+      // localStorage may be unavailable in some test environments — ignore
+    }
+    return res(ctx.status(200), ctx.json({ status_code: 200 }));
+  }),
 
   // --- Shell bootstrap (RTK Query v1: https://api.*/v1/*) ---
   rest.get('*/v1/accounts/:accountId/environments', ok(environmentsPage)),

@@ -204,6 +204,11 @@ export const selectAdminAccountSettings = createSelector(
     main_target,
     allow_ai_based_processing:
       account?.account_settings?.allow_ai_based_processing,
+    enable_scheduled_retry: account?.account_settings?.enable_scheduled_retry,
+    scheduled_retry_max_retries:
+      account?.account_settings?.scheduled_retry_max_retries,
+    scheduled_retry_delay_minutes:
+      account?.account_settings?.scheduled_retry_delay_minutes,
   }),
 );
 

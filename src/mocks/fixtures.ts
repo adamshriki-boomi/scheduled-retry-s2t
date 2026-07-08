@@ -100,6 +100,11 @@ export const accountDetails = {
     // routes to the legacy wizard (create-river.helpers.ts) and the post-
     // activation river page won't render the new S2T view (River.tsx).
     allow_create_new_stt: true,
+    // Scheduled Retry defaults — surfaced in Account Settings > Features
+    // and read by the S2T wizard step 4 Retry section.
+    enable_scheduled_retry: true,
+    scheduled_retry_max_retries: 3,
+    scheduled_retry_delay_minutes: 5,
   },
   subscription_metadata: {
     plan: 'enterprise_2025',
