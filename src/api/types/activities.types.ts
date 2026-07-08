@@ -10,6 +10,8 @@ export enum StatusTypes {
   MOCK = 'mock',
   SKIPPED = 'skipped',
 }
+
+export type RunTrigger = 'schedule' | 'api' | 'logic' | 'manual' | 'retry';
 export interface IActivity {
   account: string;
   env_id: string;
@@ -42,5 +44,5 @@ export interface ILastRun {
   run_group_id: string;
   rpu: number;
   run_date: string;
-  trigger?: string;
+  trigger?: RunTrigger;
 }

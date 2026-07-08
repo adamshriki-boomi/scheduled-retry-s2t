@@ -1,4 +1,4 @@
-import { IActivity, StatusTypes } from 'api/types';
+import { IActivity, StatusTypes, RunTrigger } from 'api/types';
 
 export interface ICollectionResponse<T> {
   items: T[];
@@ -98,5 +98,5 @@ interface LastRuns {
   run_group_id: string;
   rpu: number;
   run_date: string;
-  trigger?: string;
+  trigger?: RunTrigger;
 }

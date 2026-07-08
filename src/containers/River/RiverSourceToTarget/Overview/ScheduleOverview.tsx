@@ -9,6 +9,7 @@ import {
   Tag,
   Text,
 } from 'components';
+import { RunTrigger } from 'api/types';
 import {
   getScheduleText,
   normalizeCronTo5Fields,
@@ -338,7 +339,11 @@ const TRIGGER_LABEL: Record<string, string> = {
   retry: 'Retry',
 };
 
-export function TriggerRow({ lastRun }: { lastRun?: { trigger?: string } }) {
+export function TriggerRow({
+  lastRun,
+}: {
+  lastRun?: { trigger?: RunTrigger };
+}) {
   const trigger = lastRun?.trigger ?? 'manual';
   const label = TRIGGER_LABEL[trigger] ?? 'Manual';
   return (

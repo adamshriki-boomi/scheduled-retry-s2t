@@ -18,6 +18,7 @@ import {
   PEOPLE,
   rng,
 } from './_shared';
+import type { RunTrigger } from 'api/types/activities.types';
 
 export const STATUS = {
   SUCCEEDED: 'succeeded',
@@ -289,7 +290,7 @@ const SPECS: FlowSpec[] = [
   },
 ];
 
-export type RunTrigger = 'schedule' | 'api' | 'logic' | 'manual' | 'retry';
+export type { RunTrigger };
 
 export interface RunEntry {
   status: string;
