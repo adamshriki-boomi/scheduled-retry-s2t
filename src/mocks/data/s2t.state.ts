@@ -96,6 +96,15 @@ export const activateRiver = (crossId: string) => {
   return store[crossId];
 };
 
+export const disableRiver = (crossId: string) => {
+  const store = readStore();
+  if (store[crossId]) {
+    store[crossId].river_status = 'disabled';
+    writeStore(store);
+  }
+  return store[crossId];
+};
+
 /** Created rivers, newest first — merged into the Data Flows grid. */
 export const listCreated = (): StoredRiver[] =>
   Object.values(readStore()).sort((a, b) => b.created_at - a.created_at);
@@ -109,4 +118,9 @@ export const bumpPoll = (id: string): number => {
   const next = (pollCounters.get(id) ?? 0) + 1;
   pollCounters.set(id, next);
   return next;
+};
+
+/** Reset the poll counter for an operation/run id (call before starting a new operation). */
+export const resetPoll = (id: string): void => {
+  pollCounters.delete(id);
 };

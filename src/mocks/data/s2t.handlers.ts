@@ -17,6 +17,7 @@ import { connectionsByType } from './connections';
 import { targetTypes } from './datasources';
 import {
   ACTIVATION_PREFIX,
+  DEACTIVATION_PREFIX,
   activationResult,
   columnList,
   decodeOp,
@@ -26,7 +27,15 @@ import {
   tableList,
   testResultsList,
 } from './s2t.metadata';
-import { activateRiver, bumpPoll, getRiver, saveRiver } from './s2t.state';
+import {
+  activateRiver,
+  bumpPoll,
+  disableRiver,
+  getRiver,
+  listCreated,
+  resetPoll,
+  saveRiver,
+} from './s2t.state';
 
 const ok = (body: unknown) => (_req: any, res: any, ctx: any) =>
   res(ctx.status(200), ctx.json(body));
@@ -36,12 +45,26 @@ const FIXED_ISO = '2024-06-01T00:00:00.000Z';
 const oid = (id: string) => ({ $oid: id });
 
 // A deterministic-but-unique id for a newly created river, derived from its name.
-const newRiverId = (name: string) => {
+// Salted with the current store size so that two rivers with the same name in one
+// session get different ids and distinct poll counters (no Date.now/Math.random).
+const newRiverId = (name: string): string => {
   let h = 0;
   for (let i = 0; i < (name || '').length; i++) {
     h = (h * 31 + name.charCodeAt(i)) >>> 0;
   }
-  return `bb${h.toString(16).padStart(22, '0')}`.slice(0, 24);
+  const base = `bb${h.toString(16).padStart(22, '0')}`.slice(0, 24);
+  // If the base id already exists in the store (same name used again this session),
+  // append the store size as a deterministic salt and re-hash until unique.
+  let candidate = base;
+  let salt = 0;
+  while (listCreated().some(r => r.cross_id === candidate)) {
+    salt += 1;
+    let sh = h;
+    // mix the salt in
+    sh = (sh * 31 + salt) >>> 0;
+    candidate = `bb${sh.toString(16).padStart(22, '0')}`.slice(0, 24);
+  }
+  return candidate;
 };
 
 // --- Target-types (Step 2) — createRiveryApiV1 region host -----------------
@@ -118,10 +141,11 @@ const pullRequestsHandler = rest.post('*/pull_requests', (req, res, ctx) => {
   );
 });
 
-// --- Operations poll — shared by BOTH the metadata service AND activation ---
+// --- Operations poll — shared by the metadata service, activation, and disable ---
 // GET */operations/:opId. Branch on the operation-id prefix:
-//   act::<riverId>  → activation status (polls 1-2 'R', ≥3 'D' + result map)
-//   op::<task>...   → metadata result, decoded from the id alone (cookie revisit)
+//   act::<riverId>   → activation status (polls 1-2 'R', ≥3 'D' + result map → river active)
+//   deact::<riverId> → disable status   (polls 1-2 'R', ≥3 'D' + result map → river disabled)
+//   op::<task>...    → metadata result, decoded from the id alone (cookie revisit)
 const operationsHandler = rest.get('*/operations/:opId', (req, res, ctx) => {
   const opId = String(req.params.opId);
 
@@ -135,6 +159,26 @@ const operationsHandler = rest.get('*/operations/:opId', (req, res, ctx) => {
       );
     }
     activateRiver(riverId);
+    return res(
+      ctx.status(200),
+      ctx.json({
+        status: 'D',
+        operation_id: opId,
+        result: activationResult(),
+      }),
+    );
+  }
+
+  if (opId.startsWith(DEACTIVATION_PREFIX)) {
+    const riverId = opId.slice(DEACTIVATION_PREFIX.length);
+    const poll = bumpPoll(opId);
+    if (poll < 3) {
+      return res(
+        ctx.status(200),
+        ctx.json({ status: 'R', operation_id: opId }),
+      );
+    }
+    disableRiver(riverId);
     return res(
       ctx.status(200),
       ctx.json({
@@ -265,39 +309,50 @@ const updateRiverHandler = rest.put('*/rivers/:riverId', (req, res, ctx) => {
 });
 
 // POST */rivers/:riverId/activate_river — MUST be 'R' (immediate 'D' → error branch).
+// Reset the poll counter so that re-activating in the same session replays the
+// full R→R→D progression (stale counter ≥3 would return 'D' immediately → error).
 const activateRiverHandler = rest.post(
   '*/rivers/:riverId/activate_river',
   (req, res, ctx) => {
     const riverId = String(req.params.riverId);
+    const opId = `${ACTIVATION_PREFIX}${riverId}`;
+    resetPoll(opId);
     return res(
       ctx.status(200),
       ctx.json({
         status: 'R',
-        operation_id: `${ACTIVATION_PREFIX}${riverId}`,
+        operation_id: opId,
       }),
     );
   },
 );
 
-// POST */rivers/:riverId/disable_river — mirror activation handshake.
+// POST */rivers/:riverId/disable_river — uses a distinct 'deact::' prefix so the
+// operations handler can set river status to disabled (not active) on 'D'.
+// Reset the counter so repeated disable/enable cycles replay the full R→R→D progression.
 const disableRiverHandler = rest.post(
   '*/rivers/:riverId/disable_river',
   (req, res, ctx) => {
     const riverId = String(req.params.riverId);
+    const opId = `${DEACTIVATION_PREFIX}${riverId}`;
+    resetPoll(opId);
     return res(
       ctx.status(200),
       ctx.json({
         status: 'R',
-        operation_id: `${ACTIVATION_PREFIX}${riverId}`,
+        operation_id: opId,
       }),
     );
   },
 );
 
 // POST */rivers/:riverId/run — {} crashes useRiverRun (runs[0].run_id).
+// Reset the run-group poll counter so each run re-plays the running→succeeded
+// progression (stale counter ≥3 would show success instantly on repeat runs).
 const runRiverHandler = rest.post('*/rivers/:riverId/run', (req, res, ctx) => {
   const riverId = String(req.params.riverId);
   const runGroupId = `rg::${riverId}`;
+  resetPoll(`rungroup::${runGroupId}`);
   return res(
     ctx.status(200),
     ctx.json({

@@ -223,6 +223,7 @@ export const metadataResultForTask = (task: string): string[] => {
 // Keys must match `baseStatusMap` in RiverActivation/hooks.ts. Each step's
 // `validation_status` drives the per-step icons in the activation modal.
 export const ACTIVATION_PREFIX = 'act::';
+export const DEACTIVATION_PREFIX = 'deact::';
 
 export const activationResult = () => ({
   validate_river_target: { validation_status: 'success', details: null },
