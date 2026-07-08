@@ -81,6 +81,12 @@ export function RetrySettings() {
           accountSettings?.scheduled_retry_delay_minutes ?? 5,
         );
       }
+    } else {
+      // Clear stale validation errors when toggle is switched OFF
+      formApi?.clearErrors([
+        'river.settings.scheduled_retry.max_retries',
+        'river.settings.scheduled_retry.delay_minutes',
+      ]);
     }
   };
 
