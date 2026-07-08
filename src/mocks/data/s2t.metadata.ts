@@ -220,12 +220,22 @@ export const metadataResultForTask = (task: string): string[] => {
 };
 
 // --- Activation status result (poll of activate_river's operation) ---------
-// Keys must match `baseStatusMap` in RiverActivation/hooks.ts. Each step's
-// `validation_status` drives the per-step icons in the activation modal.
+// Top-level keys must match `baseStatusMap` in RiverActivation/hooks.ts, and
+// each holds a MAP of steps — ActivationStatusLogState passes each section to
+// SectionStatus, which destructures `validation_status` from every step value
+// and renders the step key (capitalized) as its label.
 export const ACTIVATION_PREFIX = 'act::';
 export const DEACTIVATION_PREFIX = 'deact::';
 
+const okStep = { validation_status: 'success', details: null };
+
 export const activationResult = () => ({
-  validate_river_target: { validation_status: 'success', details: null },
-  update_river_settings: { validation_status: 'success', details: null },
+  validate_river_target: {
+    'target connectivity': okStep,
+    'schema compatibility': okStep,
+  },
+  update_river_settings: {
+    'update settings': okStep,
+    'apply schedule': okStep,
+  },
 });

@@ -95,4 +95,7 @@ export const activitiesStatistics = {
   pending: FLOWS.reduce((s, f) => s + f.counts.pending, 0),
   failed: FLOWS.reduce((s, f) => s + f.counts.failed, 0),
   succeeded: FLOWS.reduce((s, f) => s + f.counts.succeeded, 0),
+  // Summed per-day by the river summary's Activity card (BDU stat) — absent
+  // values would reduce to NaN and render "BDU NaN".
+  total_rpu: Number(FLOWS.reduce((s, f) => s + f.units, 0).toFixed(2)),
 };

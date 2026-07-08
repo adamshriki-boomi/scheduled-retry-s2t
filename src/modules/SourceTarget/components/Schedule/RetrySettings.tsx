@@ -97,8 +97,14 @@ export function RetrySettings() {
         <Text textStyle="M6" color="primary" flexShrink={0}>
           Retry failed runs
         </Text>
-        <Tag size="sm" variant="purple" borderRadius="999px" h="20px">
-          <TagLabel>S2T only</TagLabel>
+        <Tag
+          size="sm"
+          variant="purple"
+          borderRadius="999px"
+          h="20px"
+          flexShrink={0}
+        >
+          <TagLabel whiteSpace="nowrap">S2T only</TagLabel>
         </Tag>
         <RiveryInfoTooltip description="Manual runs and schedules more frequent than every 2 hours are not retried." />
         <RiverySwitch
