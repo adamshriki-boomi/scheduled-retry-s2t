@@ -8,6 +8,8 @@
 import { ACCOUNT_ID, ENV_PROD_ID } from '../fixtures';
 import { connectorById, iconRel, oid } from './_shared';
 import { CONNECTIONS } from './seed';
+import { DEMO_CONNECTIONS } from './s2t.metadata';
+import { getOId } from '../../utils/api.sanitizer';
 
 export const connectionsList = CONNECTIONS.map(c => {
   const connector = connectorById(c.connector);
@@ -32,3 +34,25 @@ export const connectionsList = CONNECTIONS.map(c => {
     last_test_date: { $date: c.updated },
   };
 });
+
+/**
+ * GET /api/connections — the S2T wizard fetches connections two ways:
+ *   ?connection_type=mysql|snowflake  (fetchConnectionsByType redux thunk) → bare array
+ *   ?_id=<crossId>                    (useGetConnectionQuery)              → bare array (reads [0])
+ * Both return `IConnectionType[]`. We only serve the two demo connections the
+ * wizard walks with ("test shiran" MySQL + "Rivery Snowflake").
+ */
+export const connectionsByType = (opts: {
+  connectionType?: string | null;
+  id?: string | null;
+}) => {
+  if (opts.id) {
+    return DEMO_CONNECTIONS.filter(c => getOId(c.cross_id) === opts.id);
+  }
+  if (opts.connectionType) {
+    return DEMO_CONNECTIONS.filter(
+      c => c.connection_type === opts.connectionType,
+    );
+  }
+  return DEMO_CONNECTIONS;
+};

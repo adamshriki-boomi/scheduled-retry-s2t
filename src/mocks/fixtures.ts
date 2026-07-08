@@ -96,6 +96,10 @@ export const accountDetails = {
     allow_new_environments: true,
     use_new_river_list: true,
     show_copilot: true,
+    // Gate for the new Source-to-Target wizard: without it, "Create Data Flow"
+    // routes to the legacy wizard (create-river.helpers.ts) and the post-
+    // activation river page won't render the new S2T view (River.tsx).
+    allow_create_new_stt: true,
   },
   subscription_metadata: {
     plan: 'enterprise_2025',
