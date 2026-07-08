@@ -1,5 +1,5 @@
 import { Box, Flex, IconButton, Portal, Text } from '@chakra-ui/react';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useCore } from 'store/core';
 import { TOUR_STORIES } from './tour.config';
@@ -81,9 +81,30 @@ export function PrototypeTour() {
     });
   }, []);
 
+  // The new-flow wizard is a full-bleed workspace — its source/target tile
+  // grid extends under the card's fixed anchor, so an expanded card would
+  // hide tiles (e.g. MySQL). Auto-collapse when ENTERING the wizard; an
+  // explicit pill click can still re-expand there.
+  const onWizard = location.pathname.includes('/new/source-to-target');
+  useEffect(() => {
+    if (onWizard) setCollapsed(true);
+  }, [onWizard]);
+
+  // The wizard's footer bar (Exit / Back / Next) also sits bottom-right —
+  // lift the anchor above it there so the pill never covers Next.
+  const anchorBottom = onWizard ? '84px' : '20px';
+
   if (!account || !env) return null;
 
   const pathname = location.pathname;
+
+  // Navigate to a story and get out of the way: the card collapses to the
+  // pill so it never covers the surface the user is about to explore.
+  const goToStory = (route: string) => {
+    history.push(route);
+    setCollapsed(true);
+    writeCollapsed(true);
+  };
 
   // ------------------------------------------------------------------
   // Collapsed pill button
@@ -95,7 +116,7 @@ export function PrototypeTour() {
           as="button"
           onClick={toggle}
           position="fixed"
-          bottom="20px"
+          bottom={anchorBottom}
           right="20px"
           zIndex={1390}
           align="center"
@@ -140,7 +161,7 @@ export function PrototypeTour() {
     <Portal>
       <Box
         position="fixed"
-        bottom="20px"
+        bottom={anchorBottom}
         right="20px"
         zIndex={1390}
         w="360px"
@@ -215,7 +236,7 @@ export function PrototypeTour() {
                 <Box
                   key={story.id}
                   as="li"
-                  onClick={() => history.push(route)}
+                  onClick={() => goToStory(route)}
                   cursor="pointer"
                   borderRadius="7px"
                   mb="4px"
@@ -232,7 +253,7 @@ export function PrototypeTour() {
                   onKeyDown={(e: React.KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      history.push(route);
+                      goToStory(route);
                     }
                   }}
                   aria-current={active ? 'page' : undefined}
