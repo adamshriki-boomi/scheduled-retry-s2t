@@ -7,6 +7,7 @@ import { WIDE_MENU } from 'layout/Sidebar/common';
 import { useBdiConfig } from 'modules/BdiPrototype';
 import { ApiErrorHandler } from 'modules/ApiErrorHandler';
 import { useGetEnvironmentsQuery } from 'modules/Environments/environments.query';
+import { PrototypeTour } from 'modules/PrototypeTour';
 import React, { useState } from 'react';
 import { AppRouter } from './routers';
 import { useUrlWatcherAccountAndEnv } from './routers/hooks/useUrlWatcherAccountAndEnv';
@@ -46,16 +47,24 @@ export function AuthenticatedApp() {
 
   if (showMasthead) {
     return (
-      <Grid
-        templateRows={`${MASTHEAD_HEIGHT}px 1fr`}
-        height="100vh"
-        overflow="hidden"
-      >
-        <ExoMasthead />
-        {body}
-      </Grid>
+      <>
+        <Grid
+          templateRows={`${MASTHEAD_HEIGHT}px 1fr`}
+          height="100vh"
+          overflow="hidden"
+        >
+          <ExoMasthead />
+          {body}
+        </Grid>
+        <PrototypeTour />
+      </>
     );
   }
 
-  return body;
+  return (
+    <>
+      {body}
+      <PrototypeTour />
+    </>
+  );
 }
