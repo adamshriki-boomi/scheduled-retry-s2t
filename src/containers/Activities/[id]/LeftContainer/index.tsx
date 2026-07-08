@@ -18,6 +18,7 @@ const ViewRenderer = {
         { label: 'Run Time', width: '160px' },
         { label: 'Max Duration', sort: 'max_duration', width: '130px' },
         { label: 'BDU', sort: 'units' },
+        { label: 'Trigger', width: '70px' },
       ]}
     />
   ),

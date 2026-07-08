@@ -425,6 +425,50 @@ function buildFlow(spec: FlowSpec, i: number): Flow {
 
 export const FLOWS: Flow[] = SPECS.map(buildFlow);
 
+// ---------------------------------------------------------------------------
+// Scheduled-Retry story injection — Phase 3D
+//
+// For flows with `mixed` or `failing` health that are scheduled, prepend two
+// deterministic runs to the top of runHistory so stakeholders see the
+// self-healing narrative in the Activities per-river run list:
+//   runHistory[1] — failed, trigger='schedule'  (the problem run)
+//   runHistory[0] — succeeded, trigger='retry'  (~5 min later, the auto-fix)
+//
+// Timestamps are anchored to each flow's own `lastRun` (already derived from
+// NOW via minsAgo/hoursAgo in buildFlow) so they stay internally consistent
+// without introducing a fresh Date.now() call here.
+// ---------------------------------------------------------------------------
+const RETRY_STORY_NAMES = new Set([
+  'Marketo Leads → Snowflake',
+  'Facebook Ads Insights → Snowflake',
+]);
+
+const FIVE_MINS = 5 * 60_000;
+
+for (const flow of FLOWS) {
+  if (!RETRY_STORY_NAMES.has(flow.name)) continue;
+
+  const failedRun: RunEntry = {
+    status: STATUS.FAILED,
+    trigger: 'schedule',
+    run_date: flow.lastRun - FIVE_MINS,
+    max_run_duration_milliseconds: 38_000,
+    run_group_id: mkId(9, flow.index * 10 + 1),
+    rpu: 1.2,
+  };
+  const retryRun: RunEntry = {
+    status: STATUS.SUCCEEDED,
+    trigger: 'retry',
+    run_date: flow.lastRun,
+    max_run_duration_milliseconds: 41_000,
+    run_group_id: mkId(9, flow.index * 10 + 2),
+    rpu: 1.2,
+  };
+
+  // Prepend: most-recent first → [retryRun, failedRun, ...original runs]
+  flow.runHistory.unshift(retryRun, failedRun);
+}
+
 /** Human label for a flow's source connector (for descriptions/tooltips). */
 export const flowSourceName = (f: Flow) =>
   connectorById(f.source)?.name ?? f.source;

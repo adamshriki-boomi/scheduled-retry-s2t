@@ -54,7 +54,7 @@ function getSortOrder(current) {
 }
 
 export const gridTemplateColumns = (isRuns = true) =>
-  isRuns ? '2fr 1fr 2fr 50px 70px' : '4fr 1fr 90px';
+  isRuns ? '2fr 1fr 2fr 70px 50px 70px' : '4fr 1fr 90px';
 
 type ApiHook =
   | typeof activitiesApi.endpoints.getActivityRiverRuns.useQuery

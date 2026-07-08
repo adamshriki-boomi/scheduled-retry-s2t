@@ -6,6 +6,7 @@ import {
   ListItem,
   RiveryOverlay,
   StatusWithTooltip,
+  Tag,
   Text,
   UnorderedList,
 } from 'components';
@@ -57,6 +58,23 @@ export function RunRow({ item: run, index }) {
         <Flex m={1} minW="50px">
           <RPUDisplay value={run?.rpu} />
         </Flex>
+      </Flex>
+      <Flex minW="70px" alignItems="center">
+        {run?.trigger === 'retry' ? (
+          <Tag size="sm" variant="blue" borderRadius="999px">
+            Retry
+          </Tag>
+        ) : (
+          <Text textStyle="R7">
+            {run?.trigger === 'schedule'
+              ? 'Schedule'
+              : run?.trigger === 'api'
+              ? 'API'
+              : run?.trigger === 'logic'
+              ? 'Logic'
+              : 'Manual'}
+          </Text>
+        )}
       </Flex>
       <Flex minW="70px" mx={2} alignItems="center">
         {isRunSkipped ? (

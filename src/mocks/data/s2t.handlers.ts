@@ -15,6 +15,7 @@ import { rest } from 'msw';
 import { ACCOUNT_ID, ENV_PROD_ID } from '../fixtures';
 import { connectionsByType } from './connections';
 import { targetTypes } from './datasources';
+import { FLOWS } from './seed';
 import {
   ACTIVATION_PREFIX,
   DEACTIVATION_PREFIX,
@@ -374,6 +375,51 @@ const cancelRunHandler = rest.post(
   ok({ details: 'canceled' }),
 );
 
+// GET */rivers/:riverId/activities_run_groups (LIST) — per-river run history for
+// the Activities per-river run list. MUST be registered BEFORE the DETAIL route
+// (activities_run_groups/:runGroupId) so MSW matches the specific path first.
+// Serves the flow's seeded runHistory mapped to IRunScheduler shape.
+const runGroupsListHandler = rest.get(
+  '*/rivers/:riverId/activities_run_groups',
+  (req, res, ctx) => {
+    const riverId = String(req.params.riverId);
+    const p = req.url.searchParams;
+    const page = Number(p.get('page')) || 1;
+    const perPage = Number(p.get('items_per_page')) || 25;
+
+    const flow = FLOWS.find(f => f.cross === riverId);
+    const runHistory = flow?.runHistory ?? [];
+
+    const start = (page - 1) * perPage;
+    const pageItems = runHistory.slice(start, start + perPage);
+
+    const items = pageItems.map(r => ({
+      run_group_id: r.run_group_id,
+      status: r.status,
+      rpu: r.rpu,
+      max_duration_in_milliseconds: r.max_run_duration_milliseconds,
+      run_date_epoch_milliseconds: r.run_date,
+      run_date_utc: new Date(r.run_date).toISOString(),
+      trigger: r.trigger,
+    }));
+
+    return res(
+      ctx.status(200),
+      ctx.json({
+        items,
+        next_page:
+          start + perPage < runHistory.length ? `page=${page + 1}` : '',
+        total_items: runHistory.length,
+        page,
+        current_page_size: items.length,
+        river_cross_id: ACCOUNT_ID,
+        environment_id: ENV_PROD_ID,
+        account_id: ACCOUNT_ID,
+      }),
+    );
+  },
+);
+
 // GET */rivers/:riverId/activities_run_groups/:runGroupId — table counters,
 // polled every 3s. running → succeeded across 2-3 polls, counters keyed to the
 // created river's selected-table count.
@@ -541,6 +587,7 @@ export const s2tHandlers = [
   disableRiverHandler,
   runRiverHandler,
   cancelRunHandler,
+  runGroupsListHandler, // LIST must precede DETAIL (:runGroupId)
   runGroupHandler,
   singleRunHandler,
   // Legacy landing-page fetch

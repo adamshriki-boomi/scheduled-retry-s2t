@@ -56,6 +56,7 @@ export interface IRunScheduler {
   max_duration_in_milliseconds: number;
   run_date_epoch_milliseconds: number;
   run_date_utc: string;
+  trigger?: RunTrigger;
 }
 
 // Activities Targets
