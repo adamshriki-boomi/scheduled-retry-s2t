@@ -120,6 +120,7 @@ export const getControls = ({ targets }) => [
     type: ControlList.SWITCH,
     name: 'enable_scheduled_retry',
     display_name: 'Enable Scheduled Retry',
+    formControlStyle: { mt: 3 },
   },
   {
     type: ControlList.PLAIN_TEXT,
@@ -127,6 +128,7 @@ export const getControls = ({ targets }) => [
     fontSize: 'xs',
     display_name:
       'Default retry settings applied to new Source-to-Target Data Flows. S2T only.',
+    mb: 2,
   },
   {
     type: ControlList.INPUT_NUMBER,

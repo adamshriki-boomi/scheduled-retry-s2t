@@ -15,7 +15,7 @@ import { rest } from 'msw';
 import { ACCOUNT_ID, ENV_PROD_ID } from '../fixtures';
 import { connectionsByType } from './connections';
 import { targetTypes } from './datasources';
-import { connectorById, groupByKey } from './_shared';
+import { connectorById, groupByKey, mkId } from './_shared';
 import { FLOWS } from './seed';
 import {
   ACTIVATION_PREFIX,
@@ -500,6 +500,174 @@ const singleRunHandler = rest.get(
   },
 );
 
+// ---------------------------------------------------------------------------
+// GET */rivers/:riverId/runs — per-table run rows for the right-panel grid.
+//
+// The right panel (SourceToTarget.tsx) calls useGetRiverActivitiesRunQuery which
+// maps to rivers/:riverId/runs?run_group_id=<id>&start_time=...&end_time=...
+// returning RiverActivitiesRunResponse { items: IRiverActivityRun[], ... }.
+//
+// Crash vector: no handler → falls to */v1/* fallback → items:[] → blank panel.
+// Seeded run_group_ids (mkId(3,…) and mkId(9,…)) never match the rg:: guard in
+// runGroupHandler so they'd fall through even if that handler ran.
+//
+// We generate deterministic per-table rows (IRiverActivityRun shape) keyed to
+// the run_group_id. Each source has a small table list; the Marketo failedRun
+// shows one table failed, the rest succeeded; all other runs show all-succeeded.
+// ---------------------------------------------------------------------------
+const SOURCE_TABLES: Record<string, string[]> = {
+  salesforce: ['Account', 'Contact', 'Opportunity', 'Lead', 'Task'],
+  hubspot: ['contacts', 'companies', 'deals', 'email_events'],
+  marketo: ['leads', 'activities', 'programs', 'campaigns'],
+  facebook_ads: ['ads', 'ad_sets', 'campaigns', 'insights'],
+  stripe: ['charges', 'invoices', 'subscriptions', 'customers'],
+  zendesk: ['tickets', 'users', 'organizations', 'satisfaction_ratings'],
+  google_analytics: ['sessions', 'events', 'users', 'page_views'],
+  netsuite: ['transactions', 'gl_accounts', 'items', 'vendors'],
+  mixpanel: ['events', 'users', 'funnels', 'retention'],
+  postgres: ['users', 'events', 'feature_flags', 'sessions'],
+  mysql: ['events', 'logs', 'sessions', 'errors'],
+  shopify: ['orders', 'products', 'customers', 'line_items'],
+  linkedin: ['campaigns', 'ad_analytics', 'creatives'],
+  intercom: ['conversations', 'contacts', 'events'],
+  jira: ['issues', 'projects', 'users', 'sprints'],
+};
+const DEFAULT_TABLES = ['table_a', 'table_b', 'table_c'];
+
+// Build IRiverActivityRun[] rows for a given run entry + flow source.
+// failedTableIdx: if >=0, that table index gets status 'failed'; rest succeed.
+const buildRunRows = (
+  run: {
+    run_group_id: string;
+    status: string;
+    run_date: number;
+    max_run_duration_milliseconds: number;
+  },
+  source: string,
+  riverId: string,
+  failedTableIdx = -1,
+): any[] => {
+  const tables = SOURCE_TABLES[source] ?? DEFAULT_TABLES;
+  const end = run.run_date + run.max_run_duration_milliseconds;
+  return tables.map((tbl, idx) => {
+    const tableStatus =
+      run.status === 'failed' && failedTableIdx < 0
+        ? idx === 0
+          ? 'failed'
+          : 'succeeded' // at least one failed table for a failed run
+        : failedTableIdx === idx
+        ? 'failed'
+        : run.status === 'running'
+        ? idx === 0
+          ? 'running'
+          : 'pending'
+        : run.status === 'succeeded' || run.status === 'partially succeeded'
+        ? 'succeeded'
+        : run.status;
+    return {
+      run_id: `${run.run_group_id}::table::${idx}`,
+      datasource_id: source,
+      error_description:
+        tableStatus === 'failed' ? 'Connection timeout after 30s' : '',
+      units: Number((0.1 + idx * 0.05).toFixed(2)),
+      run_group_id: run.run_group_id,
+      status: tableStatus,
+      source_name: source,
+      target_name: tbl,
+      start_date_utc: new Date(run.run_date).toISOString(),
+      start_date_in_milliseconds: run.run_date,
+      end_date_utc: new Date(end).toISOString(),
+      end_date_in_milliseconds:
+        tableStatus === 'running' || tableStatus === 'pending' ? 0 : end,
+      sub_river_id: '',
+      is_sub_river_run: false,
+    };
+  });
+};
+
+// GET */rivers/:riverId/runs — returns per-table row list (IRiverActivityRun[]).
+// Registered BEFORE singleRunHandler (which has a /runs/:runId segment) so MSW
+// can distinguish the bare /runs list from the /runs/:runId detail.
+const runsListHandler = rest.get('*/rivers/:riverId/runs', (req, res, ctx) => {
+  const riverId = String(req.params.riverId);
+  const runGroupId = req.url.searchParams.get('run_group_id') ?? '';
+
+  // Look up the flow by its cross id to get the seeded run history.
+  const flow = FLOWS.find(f => f.cross === riverId);
+  if (!flow) {
+    // Created-river path: return a minimal succeeded table set.
+    const river = getRiver(riverId);
+    const tables = river?.selectedTables ?? [];
+    const tableNames =
+      tables.length > 0
+        ? tables.map((t: any) => t.name ?? String(t))
+        : DEFAULT_TABLES;
+    const ts = FIXED_TS;
+    const items = tableNames.map((tbl: string, idx: number) => ({
+      run_id: `${runGroupId}::table::${idx}`,
+      datasource_id: river?.payload?.properties?.source?.datasource_id ?? '',
+      error_description: '',
+      units: 0.1,
+      run_group_id: runGroupId,
+      status: 'succeeded',
+      source_name: river?.payload?.properties?.source?.connection_name ?? '',
+      target_name: tbl,
+      start_date_utc: new Date(ts).toISOString(),
+      start_date_in_milliseconds: ts,
+      end_date_utc: new Date(ts + 42_000).toISOString(),
+      end_date_in_milliseconds: ts + 42_000,
+      sub_river_id: '',
+      is_sub_river_run: false,
+    }));
+    return res(
+      ctx.status(200),
+      ctx.json({
+        items,
+        next_page: '',
+        total_items: items.length,
+        page: 1,
+        current_page_size: items.length,
+        master_river_id: riverId,
+      }),
+    );
+  }
+
+  // Seeded flow: find the run in runHistory by run_group_id.
+  const run = flow.runHistory.find(r => r.run_group_id === runGroupId);
+  if (!run) {
+    return res(
+      ctx.status(200),
+      ctx.json({
+        items: [],
+        next_page: '',
+        total_items: 0,
+        page: 1,
+        current_page_size: 0,
+        master_river_id: riverId,
+      }),
+    );
+  }
+
+  // For the Marketo/Facebook retry story: the failedRun (mkId(9, index*10+1))
+  // shows a realistic partial failure — first table failed, rest succeeded.
+  // The retryRun (mkId(9, index*10+2)) shows all succeeded.
+  const isRetryStoryFailed = run.run_group_id === mkId(9, flow.index * 10 + 1);
+  const failedTableIdx = isRetryStoryFailed ? 0 : -1;
+
+  const items = buildRunRows(run, flow.source, riverId, failedTableIdx);
+  return res(
+    ctx.status(200),
+    ctx.json({
+      items,
+      next_page: '',
+      total_items: items.length,
+      page: 1,
+      current_page_size: items.length,
+      master_river_id: riverId,
+    }),
+  );
+});
+
 // Derive a plausible target datasource_id from the flow name ("→ Snowflake" etc).
 const targetDatasourceFromName = (name: string): string => {
   if (name.includes('BigQuery')) return 'bigquery';
@@ -623,6 +791,9 @@ const fetchRiverListHandler = rest.post(
       const sourceConnector = connectorById(seededFlow.source);
       const targetId = targetDatasourceFromName(seededFlow.name);
       const targetConnector = connectorById(targetId);
+      // tasks_definitions lets RiverHeader.tsx resolve source/target logos via
+      // datasource_id (ordinal 0 = source, ordinal 1 = target). Without this
+      // DataSourceIcon receives type=undefined and renders a blank icon.
       return res(
         ctx.status(200),
         ctx.json({
@@ -659,7 +830,10 @@ const fetchRiverListHandler = rest.post(
               : [],
             shared_params: sharedParams,
           },
-          tasks_definitions: [],
+          tasks_definitions: [
+            { ordinal: 0, datasource_id: seededFlow.source },
+            { ordinal: 1, datasource_id: targetId },
+          ],
         }),
       );
     }
@@ -667,6 +841,10 @@ const fetchRiverListHandler = rest.post(
     // Wizard-created river branch.
     const stored = getRiver(crossId);
     const source = stored?.payload?.properties?.source ?? {};
+    const target = stored?.payload?.properties?.target ?? {};
+    // tasks_definitions lets RiverHeader.tsx resolve source/target logos via
+    // datasource_id (ordinal 0 = source, ordinal 1 = target). Without this
+    // DataSourceIcon receives type=undefined and renders a blank icon.
     return res(
       ctx.status(200),
       ctx.json({
@@ -693,7 +871,10 @@ const fetchRiverListHandler = rest.post(
           schedulers: [{ is_enabled: true, cron_expression: '0 0 1/1 * *' }],
           shared_params: sharedParams,
         },
-        tasks_definitions: [],
+        tasks_definitions: [
+          { ordinal: 0, datasource_id: source.datasource_id ?? 'mysql' },
+          { ordinal: 1, datasource_id: target.datasource_id ?? 'snowflake' },
+        ],
       }),
     );
   },
@@ -725,6 +906,7 @@ export const s2tHandlers = [
   cancelRunHandler,
   runGroupsListHandler, // LIST must precede DETAIL (:runGroupId)
   runGroupHandler,
+  runsListHandler, // bare /runs list (right panel) must precede /runs/:runId detail
   singleRunHandler,
   // Legacy landing-page fetch
   fetchRiverListHandler,
