@@ -27,8 +27,19 @@ const bounceAnim = keyframes`
   50%       { transform: translateY(-4px); }
 `;
 
-/** Names to target — MySQL on step 1 (source), Snowflake on step 2 (target). */
-const BEACON_TARGETS: ReadonlyArray<string> = ['MySQL', 'Snowflake'];
+/**
+ * Names to target, resolved per picker: MySQL appears as a tile in BOTH grids
+ * (it is also offered as a target), so anchoring both names whenever present
+ * would put two beacons on the target picker. The visible picker heading
+ * ("Select the Data Source…" / "Select the Data Target…") tells us which
+ * step is showing, and each step gets exactly one beacon.
+ */
+function beaconTargetsForCurrentPicker(): string[] {
+  const text = document.body.textContent ?? '';
+  if (text.includes('Select the Data Target')) return ['Snowflake'];
+  if (text.includes('Select the Data Source')) return ['MySQL'];
+  return [];
+}
 
 interface BeaconPos {
   left: number;
@@ -102,7 +113,7 @@ export function DemoPathBeacon() {
     rafRef.current = requestAnimationFrame(() => {
       const BADGE_WIDTH = 76; // approximate rendered width of the pill
       const next: BeaconPos[] = [];
-      for (const name of BEACON_TARGETS) {
+      for (const name of beaconTargetsForCurrentPicker()) {
         const tile = findTileElement(name);
         if (tile) {
           const pos = computePos(tile, BADGE_WIDTH);
