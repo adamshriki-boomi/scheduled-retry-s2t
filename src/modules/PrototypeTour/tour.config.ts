@@ -39,7 +39,7 @@ export const TOUR_STORIES: TourStory[] = [
     id: 'new-flow',
     title: 'Configure retry on a data flow',
     blurb:
-      'The new Retry section sits under the Scheduler in step 4: toggle "Retry failed runs", set Max retries (1–12) and Delay (1–60 min). Walk the mocked MySQL → Snowflake path from step 1.',
+      "The new Retry section sits under the Scheduler in step 4. Follow the 'Demo path' marker: pick MySQL as the source and Snowflake as the target (connections are pre-selected), choose database 'das' and schema 'fsd', select a few tables, and step 4 is yours.",
     getRoute: (account, env) =>
       `/rivers/${account}/${env}/new/source-to-target`,
     isActive: (pathname, account, env) =>

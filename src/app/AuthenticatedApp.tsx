@@ -7,7 +7,7 @@ import { WIDE_MENU } from 'layout/Sidebar/common';
 import { useBdiConfig } from 'modules/BdiPrototype';
 import { ApiErrorHandler } from 'modules/ApiErrorHandler';
 import { useGetEnvironmentsQuery } from 'modules/Environments/environments.query';
-import { PrototypeTour } from 'modules/PrototypeTour';
+import { DemoPathBeacon, PrototypeTour } from 'modules/PrototypeTour';
 import React, { useState } from 'react';
 import { AppRouter } from './routers';
 import { useUrlWatcherAccountAndEnv } from './routers/hooks/useUrlWatcherAccountAndEnv';
@@ -57,6 +57,7 @@ export function AuthenticatedApp() {
           {body}
         </Grid>
         <PrototypeTour />
+        <DemoPathBeacon />
       </>
     );
   }
@@ -65,6 +66,7 @@ export function AuthenticatedApp() {
     <>
       {body}
       <PrototypeTour />
+      <DemoPathBeacon />
     </>
   );
 }

@@ -733,12 +733,24 @@ const getRiverHandler = rest.get('*/rivers/:riverId', (req, res, ctx) => {
         source: {
           datasource_id: seededFlow.source,
           connection_name: sourceConnector?.name ?? seededFlow.source,
+          name: seededFlow.source,
         },
         target: {
           datasource_id: targetId,
           connection_name: targetConnector?.name ?? targetId,
+          name: targetId,
         },
-        schemas: [],
+        schemas: (() => {
+          const tables = SOURCE_TABLES[seededFlow.source] ?? DEFAULT_TABLES;
+          return [
+            {
+              name: 'public',
+              tables: tables.map(t => ({
+                details: { name: t, target_table: t, is_selected: true },
+              })),
+            },
+          ];
+        })(),
       },
       metadata: {},
     };
