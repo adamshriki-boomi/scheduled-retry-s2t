@@ -110,16 +110,24 @@ export function PrototypeTour() {
   };
 
   // Build positioning style — if user has dragged, use explicit top/left;
-  // otherwise fall through to the default bottom/right anchor.
-  const positionStyle: React.CSSProperties = pos
-    ? {
-        position: 'fixed',
-        left: pos.x,
-        top: pos.y,
-        bottom: 'auto',
-        right: 'auto',
-      }
-    : {};
+  // otherwise fall through to the default bottom/right anchor. The stored
+  // position is shared by the pill and the 360px card, so clamp per the
+  // element being rendered: whichever it is must sit fully on-screen even
+  // when the other was dragged flush against a viewport edge.
+  const posFor = (elemW: number, elemH: number): React.CSSProperties =>
+    pos
+      ? {
+          position: 'fixed',
+          left: Math.max(8, Math.min(pos.x, window.innerWidth - elemW - 8)),
+          top: Math.max(8, Math.min(pos.y, window.innerHeight - elemH - 8)),
+          bottom: 'auto',
+          right: 'auto',
+        }
+      : {};
+  const PILL_W = 150;
+  const PILL_H = 34;
+  const CARD_W = 360;
+  const CARD_MIN_VISIBLE_H = 120; // keep at least the header + first story reachable
 
   // ------------------------------------------------------------------
   // Collapsed pill button
@@ -138,7 +146,7 @@ export function PrototypeTour() {
           bottom={pos ? 'auto' : anchorBottom}
           right={pos ? 'auto' : '20px'}
           style={{
-            ...positionStyle,
+            ...posFor(PILL_W, PILL_H),
             touchAction: 'none',
             cursor: isDragging ? 'grabbing' : 'pointer',
           }}
@@ -186,7 +194,7 @@ export function PrototypeTour() {
         position="fixed"
         bottom={pos ? 'auto' : anchorBottom}
         right={pos ? 'auto' : '20px'}
-        style={positionStyle}
+        style={posFor(CARD_W, CARD_MIN_VISIBLE_H)}
         zIndex={1390}
         w="360px"
         maxH="calc(100vh - 40px)"
