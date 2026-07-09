@@ -75,6 +75,14 @@ export function PrototypeTour() {
   const location = useLocation();
   const { pos, isDragging, onPointerDown, wasDragged } = useDragPosition();
 
+  // Measured card height, used to decide whether the card fits below the
+  // stored position or must flip open upward. Ref callback avoids an extra
+  // render: measurement happens as soon as the card mounts.
+  const cardHeightRef = React.useRef(0);
+  const measureCard = useCallback((el: HTMLDivElement | null) => {
+    if (el) cardHeightRef.current = el.offsetHeight;
+  }, []);
+
   const toggle = useCallback(() => {
     setCollapsed(prev => {
       const next = !prev;
@@ -127,7 +135,39 @@ export function PrototypeTour() {
   const PILL_W = 150;
   const PILL_H = 34;
   const CARD_W = 360;
-  const CARD_MIN_VISIBLE_H = 120; // keep at least the header + first story reachable
+
+  // Card position with an upward flip: the stored position is the element's
+  // top-left, so expanding a pill that sits low would grow the card DOWN and
+  // off-screen. When the (measured) card doesn't fit below the stored point,
+  // anchor its BOTTOM to the pill's bottom edge instead — it opens upward,
+  // like a FAB menu. While the card itself is being dragged, stay top-anchored
+  // (its drag clamp already keeps it on-screen) so the handle never jumps.
+  const cardPos = (): React.CSSProperties => {
+    if (!pos) return {};
+    const left = Math.max(8, Math.min(pos.x, window.innerWidth - CARD_W - 8));
+    const h = cardHeightRef.current || 600;
+    const fitsBelow = pos.y + h <= window.innerHeight - 8;
+    if (isDragging || fitsBelow) {
+      return {
+        position: 'fixed',
+        left,
+        top: Math.max(8, Math.min(pos.y, window.innerHeight - h - 8)),
+        bottom: 'auto',
+        right: 'auto',
+      };
+    }
+    // Anchor the card's bottom to the pill's bottom edge (opens upward), but
+    // cap it so the card's top never leaves the viewport.
+    const bottomRaw = Math.max(8, window.innerHeight - pos.y - PILL_H);
+    const bottomCap = Math.max(8, window.innerHeight - h - 8);
+    return {
+      position: 'fixed',
+      left,
+      bottom: Math.min(bottomRaw, bottomCap),
+      top: 'auto',
+      right: 'auto',
+    };
+  };
 
   // ------------------------------------------------------------------
   // Collapsed pill button
@@ -191,10 +231,11 @@ export function PrototypeTour() {
   return (
     <Portal>
       <Box
+        ref={measureCard}
         position="fixed"
         bottom={pos ? 'auto' : anchorBottom}
         right={pos ? 'auto' : '20px'}
-        style={posFor(CARD_W, CARD_MIN_VISIBLE_H)}
+        style={cardPos()}
         zIndex={1390}
         w="360px"
         maxH="calc(100vh - 40px)"
