@@ -75,15 +75,17 @@ function findTileElement(name: string): Element | null {
   return null;
 }
 
-/** Compute fixed-position coords to center the badge above a tile. */
+/** Compute fixed-position coords to pin the badge onto a tile's top edge. */
 function computePos(
   tile: Element,
   badgeWidth: number,
 ): { left: number; top: number } {
   const rect = tile.getBoundingClientRect();
   const left = rect.left + rect.width / 2 - badgeWidth / 2;
-  // 8px gap above the tile top
-  const top = rect.top - 36 - 8;
+  // Straddle the tile's own top border (half above, half on the card):
+  // floating it fully above the tile lands inside the card of the row
+  // above in the tight picker grid and reads as anchored to the wrong tile.
+  const top = rect.top - 13;
   return { left, top };
 }
 
@@ -98,7 +100,7 @@ export function DemoPathBeacon() {
   const measure = useCallback(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
-      const BADGE_WIDTH = 96; // approximate rendered width of the pill
+      const BADGE_WIDTH = 76; // approximate rendered width of the pill
       const next: BeaconPos[] = [];
       for (const name of BEACON_TARGETS) {
         const tile = findTileElement(name);
