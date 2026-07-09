@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useCore } from 'store/core';
 import { TOUR_STORIES } from './tour.config';
+import { useDragPosition } from './useDragPosition';
 
 const LS_KEY = 'srs2t.tour.collapsed';
 
@@ -72,6 +73,7 @@ export function PrototypeTour() {
   const { activeAccountId: account, envId: env } = useCore();
   const history = useHistory();
   const location = useLocation();
+  const { pos, isDragging, onPointerDown, wasDragged } = useDragPosition();
 
   const toggle = useCallback(() => {
     setCollapsed(prev => {
@@ -92,6 +94,7 @@ export function PrototypeTour() {
 
   // The wizard's footer bar (Exit / Back / Next) also sits bottom-right —
   // lift the anchor above it there so the pill never covers Next.
+  // Only applies when the user hasn't dragged to a custom position.
   const anchorBottom = onWizard ? '84px' : '20px';
 
   if (!account || !env) return null;
@@ -106,6 +109,18 @@ export function PrototypeTour() {
     writeCollapsed(true);
   };
 
+  // Build positioning style — if user has dragged, use explicit top/left;
+  // otherwise fall through to the default bottom/right anchor.
+  const positionStyle: React.CSSProperties = pos
+    ? {
+        position: 'fixed',
+        left: pos.x,
+        top: pos.y,
+        bottom: 'auto',
+        right: 'auto',
+      }
+    : {};
+
   // ------------------------------------------------------------------
   // Collapsed pill button
   // ------------------------------------------------------------------
@@ -114,10 +129,19 @@ export function PrototypeTour() {
       <Portal>
         <Flex
           as="button"
-          onClick={toggle}
+          onPointerDown={onPointerDown}
+          onClick={() => {
+            if (wasDragged()) return;
+            toggle();
+          }}
           position="fixed"
-          bottom={anchorBottom}
-          right="20px"
+          bottom={pos ? 'auto' : anchorBottom}
+          right={pos ? 'auto' : '20px'}
+          style={{
+            ...positionStyle,
+            touchAction: 'none',
+            cursor: isDragging ? 'grabbing' : 'pointer',
+          }}
           zIndex={1390}
           align="center"
           gap="6px"
@@ -127,7 +151,6 @@ export function PrototypeTour() {
           color="white"
           borderRadius="full"
           boxShadow="0 2px 12px rgba(0,0,0,0.22)"
-          cursor="pointer"
           _hover={{
             bg: 'brand',
             transform: 'translateY(-1px)',
@@ -161,8 +184,9 @@ export function PrototypeTour() {
     <Portal>
       <Box
         position="fixed"
-        bottom={anchorBottom}
-        right="20px"
+        bottom={pos ? 'auto' : anchorBottom}
+        right={pos ? 'auto' : '20px'}
+        style={positionStyle}
         zIndex={1390}
         w="360px"
         maxH="calc(100vh - 40px)"
@@ -175,7 +199,7 @@ export function PrototypeTour() {
         flexDir="column"
         overflow="hidden"
       >
-        {/* Header */}
+        {/* Header — drag handle for the expanded card */}
         <Flex
           align="center"
           justify="space-between"
@@ -183,6 +207,12 @@ export function PrototypeTour() {
           py="12px"
           bg="primary"
           flexShrink={0}
+          onPointerDown={onPointerDown}
+          style={{
+            touchAction: 'none',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+          }}
         >
           <Flex align="center" gap="8px">
             <Box color="white" opacity={0.9}>
@@ -201,7 +231,13 @@ export function PrototypeTour() {
           <IconButton
             aria-label="Collapse Prototype Guide"
             icon={<ChevronIcon up />}
-            onClick={toggle}
+            onClick={e => {
+              // Stop propagation so the header's pointerdown doesn't
+              // interfere, but the movement threshold already guards clicks.
+              e.stopPropagation();
+              if (wasDragged()) return;
+              toggle();
+            }}
             size="xs"
             variant="ghost"
             color="white"

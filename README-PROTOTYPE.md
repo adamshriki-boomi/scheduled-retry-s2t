@@ -14,7 +14,7 @@ renders the original Rivery chrome (`src/modules/BdiPrototype/config.ts`).
 
 ## Prototype Guide (floating navigator)
 
-A **Prototype Guide** panel floats in the bottom-right corner of every authenticated page. It lists the four feature surfaces — account settings, new flow wizard, Activities run history, and flow summary — and navigates to each with a single click. The currently active surface is highlighted with a left accent. Cold visitors see the panel expanded; subsequent visits remember your last collapsed/expanded state per browser (stored in `localStorage` under the key `srs2t.tour.collapsed`). Click the pill button to re-open it.
+A **Prototype Guide** panel floats in the bottom-right corner of every authenticated page. It lists the four feature surfaces — account settings, new flow wizard, Activities run history, and flow summary — and navigates to each with a single click. The currently active surface is highlighted with a left accent. Cold visitors see the panel expanded; subsequent visits remember your last collapsed/expanded state per browser (stored in `localStorage` under the key `srs2t.tour.collapsed`). Click the pill button to re-open it. The guide is draggable — drag the pill or the card's title bar to reposition it anywhere on screen, and it remembers that position per browser (stored under `srs2t.tour.pos`).
 
 ## What's new in this prototype
 
