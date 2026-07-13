@@ -11,6 +11,7 @@ export enum ControlList {
   PASSWORD = 'password',
   CHECKBOX = 'checkbox',
   SWITCH = 'switch',
+  SLIDER = 'slider',
   UPLOAD_FILE = 'file',
   PROVIDER = 'connect_with',
   COLLAPSE = 'collapse',

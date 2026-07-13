@@ -1,4 +1,3 @@
-import { TagLabel } from '@chakra-ui/react';
 import {
   Flex,
   FormControl,
@@ -7,11 +6,10 @@ import {
   Icon,
   RetryUndoIcon,
   RiveryInfoTooltip,
-  Tag,
   Text,
 } from 'components';
 import { RiverySwitch } from 'components/Form';
-import { InputNumber } from 'components/Form/components/Input/InputNumber';
+import { LimitSlider } from 'components/Form/components/LimitSlider';
 import { useEnableEdit } from 'hooks/useEnableEdit';
 import { useController } from 'react-hook-form';
 import { useAccount } from 'store/core';
@@ -95,17 +93,8 @@ export function RetrySettings() {
       <HStack w="full">
         <Icon as={RetryUndoIcon} color="primary" boxSize={4} flexShrink={0} />
         <Text textStyle="M6" color="primary" flexShrink={0}>
-          Retry failed runs
+          Scheduled Retry
         </Text>
-        <Tag
-          size="sm"
-          variant="purple"
-          borderRadius="999px"
-          h="20px"
-          flexShrink={0}
-        >
-          <TagLabel whiteSpace="nowrap">S2T only</TagLabel>
-        </Tag>
         <RiveryInfoTooltip description="Manual runs and schedules more frequent than every 2 hours are not retried." />
         <RiverySwitch
           label=""
@@ -121,36 +110,36 @@ export function RetrySettings() {
       {isToggleOn ? (
         <Flex flexDir="column" gap={2}>
           <FormControl isInvalid={!!maxRetriesState.error}>
-            <Flex textStyle="R7" color="font" gap={2} alignItems="center">
-              <Text>Max retries</Text>
-              <InputNumber
-                inputProps={{ min: 1, max: 12 }}
-                fieldHeight="35px"
-                w="60px"
-                value={maxRetriesField.value}
-                onChange={v => maxRetriesField.onChange(Number(v))}
-                isDisabled={!enableEdit}
-              />
-              <Text color="font-secondary">(1–12)</Text>
-            </Flex>
+            <Text textStyle="R7" color="font">
+              Max retries
+            </Text>
+            <LimitSlider
+              value={maxRetriesField.value}
+              onChange={maxRetriesField.onChange}
+              min={1}
+              max={12}
+              isDisabled={!enableEdit}
+              ariaLabel="Max retries"
+              width="240px"
+            />
             <FormErrorMessage>
               {maxRetriesState.error?.message}
             </FormErrorMessage>
           </FormControl>
           <FormControl isInvalid={!!delayState.error}>
-            <Flex textStyle="R7" color="font" gap={2} alignItems="center">
-              <Text>Delay between retries</Text>
-              <InputNumber
-                inputProps={{ min: 1, max: 60 }}
-                fieldHeight="35px"
-                w="60px"
-                value={delayField.value}
-                onChange={v => delayField.onChange(Number(v))}
-                isDisabled={!enableEdit}
-              />
-              <Text>minutes</Text>
-              <Text color="font-secondary">(1–60)</Text>
-            </Flex>
+            <Text textStyle="R7" color="font">
+              Delay between retries
+            </Text>
+            <LimitSlider
+              value={delayField.value}
+              onChange={delayField.onChange}
+              min={1}
+              max={60}
+              unitSuffix="min"
+              isDisabled={!enableEdit}
+              ariaLabel="Delay between retries"
+              width="240px"
+            />
             <FormErrorMessage>{delayState.error?.message}</FormErrorMessage>
           </FormControl>
         </Flex>

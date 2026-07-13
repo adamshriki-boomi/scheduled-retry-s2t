@@ -337,7 +337,7 @@ const TRIGGER_LABEL: Record<string, string> = {
   api: 'API',
   logic: 'Logic',
   manual: 'Manual',
-  retry: 'Retry',
+  retry: 'Scheduled Retry',
 };
 
 // TriggerRow renders unconditionally (with a 'manual' default) so the Trigger

@@ -39,7 +39,7 @@ export const TOUR_STORIES: TourStory[] = [
     id: 'new-flow',
     title: 'Configure retry on a data flow',
     blurb:
-      "The new Retry section sits under the Scheduler in step 4. Follow the 'Demo path' marker: pick MySQL as the source and Snowflake as the target (connections are pre-selected), choose database 'das' and schema 'fsd', select a few tables, and step 4 is yours.",
+      "The new Scheduled Retry section sits under the Scheduler in step 4. Follow the 'Demo path' marker: pick MySQL as the source and Snowflake as the target (connections are pre-selected), choose database 'das' and schema 'fsd', select a few tables, and step 4 is yours.",
     getRoute: (account, env) =>
       `/rivers/${account}/${env}/new/source-to-target`,
     isActive: (pathname, account, env) =>
@@ -49,7 +49,7 @@ export const TOUR_STORIES: TourStory[] = [
     id: 'activities',
     title: 'Watch a flow self-heal',
     blurb:
-      "In 'Marketo Leads → Snowflake' a failed scheduled run recovered automatically 5 minutes later — the new Trigger column marks the recovery run as Retry.",
+      "In 'Marketo Leads → Snowflake' a failed scheduled run recovered automatically 5 minutes later — the new Trigger column marks the recovery run as Scheduled Retry.",
     getRoute: (account, env) =>
       `/activities/${account}/${env}/activities/${MARKETO_ID}`,
     isActive: (pathname, account, env) =>

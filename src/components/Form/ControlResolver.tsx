@@ -22,6 +22,7 @@ import { KeyFilePathComponent } from './components/KeyFilePath';
 import { KeyValueList } from './components/KeyValueList';
 import { Radio } from './components/Radio';
 import { RiveryCheckbox } from './components/RiveryCheckbox';
+import { RiverySlider } from './components/RiverySlider';
 import { RiverySwitch } from './components/RiverySwitch';
 import { Secret } from './components/Secret';
 import { SelectSingle } from './components/SelectSingle';
@@ -94,6 +95,7 @@ const controlsMap = {
   [ControlList.GCLOUD]: GCloudConnection,
   [ControlList.BQ_SRC]: GCloudConnection,
   [ControlList.SWITCH]: RiverySwitch,
+  [ControlList.SLIDER]: RiverySlider,
   [ControlList.CHECKBOX]: RiveryCheckbox,
   [ControlList.LINK]: GenericLink,
   [ControlList.KEY_FILE_PATH]: KeyFilePathComponent,

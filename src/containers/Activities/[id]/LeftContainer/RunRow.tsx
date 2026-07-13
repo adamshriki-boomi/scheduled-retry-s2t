@@ -60,10 +60,10 @@ export function RunRow({ item: run, index }) {
           <RPUDisplay value={run?.rpu} />
         </Flex>
       </Flex>
-      <Flex minW="70px" alignItems="center">
+      <Flex minW="130px" alignItems="center">
         {run?.trigger === 'retry' ? (
-          <Tag size="sm" variant="blue" borderRadius="999px">
-            <TagLabel>Retry</TagLabel>
+          <Tag size="sm" variant="blue" borderRadius="999px" flexShrink={0}>
+            <TagLabel>Scheduled Retry</TagLabel>
           </Tag>
         ) : (
           <Text textStyle="R7">
